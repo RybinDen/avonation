@@ -1,13 +1,14 @@
-#Speaking player for online radiostation and audiofiles.
-#version 0.0.1
+#Player for online radiostation and audiofiles.
+#version 0.1.0 date 26.03.20
 # Denis Rybin https://github.com/rybinden/avonation
 
+import os, evdev, time, glob, requests
 from datetime import datetime
-import os, evdev, time, glob
 from omxplayer.player import OMXPlayer
+from xml.etree import ElementTree
 
-listModes = ['mainMenu', 'player', 'radio']
-translateListModes = ['Главное меню', 'Плеер', 'Радио']
+listModes = ['mainMenu', 'player', 'radio', 'podcast']
+translateListModes = ['Главное меню', 'Плеер', 'Радио', 'подкасты']
 countModess = len(listModes)
 activeMode = 0
 selectMode = 0
@@ -21,6 +22,36 @@ station = [
 stationName = ['mds', 'Маяк', 'Вести фм', 'comedy']
 stationNumber = 0
 
+podcastList = []
+podcastTitle = ''
+podcastName = []
+podcastUrl = []
+currentPodcast = 0
+currentElement = 0
+totalElements = 10
+
+def parsePodcast():
+    global podcastList, podcastTitle, podcastName, podcastUrl, currentPodcast, currentElement, totalElements
+    if len(podcastList) == 0:
+        with open('podcast.txt') as f:
+            podcastList = f.read().splitlines()
+
+    response = requests.get(podcastList[currentPodcast])
+    root = ElementTree.fromstring(response.text)
+    podcastTitle = root.findtext('channel/title')
+    if currentElement != 0:
+        currentElement = 0
+    for item in root.findall('channel/item'):
+        if currentElement == totalElements:
+            break
+        enclosure = item.find('enclosure')
+        if enclosure != None:
+            podcastName.insert(currentElement, item.findtext('title'))
+            podcastUrl.insert(currentElement, enclosure.get('url'))
+        currentElement += 1
+    currentElement = 0
+
+# сделать функцию как в подкастах парсер
 files = []
 totalObject = glob.glob('*')
 for item in totalObject:
@@ -173,6 +204,7 @@ def speakDate():
 def actionPressKeySpace():
     print('space')
     global activeMode, selectMode, player, playing
+    global podcastList, podcastTitle, podcastName, podcastUrl, currentPodcast, currentElement, totalElements
     if activeMode == 0:  # mainMenu
         activeMode = selectMode
         if activeMode == 0:
@@ -185,6 +217,9 @@ def actionPressKeySpace():
                 selectItem = 'файл: ' + selectItem + str(currentNumberFile + 1) + ' из ' + str(countFiles)
         elif activeMode == 2:
             selectItem = stationName[stationNumber] + '. ' + str(stationNumber+1) + ' из ' + str(len(station))
+        elif activeMode == 3:
+            parsePodcast()
+            selectItem = podcastTitle + '. ' + str(currentPodcast +1) + ' из ' + str(len(podcastList))
         if activeMode == 0:
             command = 'echo ' + selectItem + ' | RHVoice-test -p aleksandr'
         else:
@@ -207,9 +242,26 @@ def actionPressKeySpace():
             quitPlayer()
         else:
             playFile(station[stationNumber])
+    elif activeMode == 3:  #  all podcasts
+        activeMode = 4
+        selectItem = podcastName[currentElement] + '. ' + str(currentElement +1) + ' из ' + str(totalElements)
+        command = 'echo ' + podcastTitle + '. Выбрано: ' + selectItem + ' | RHVoice-test -p aleksandr'
+        os.system(command)
+    elif activeMode == 4:  # current podcast
+        if player == None:
+            playFile(podcastUrl[currentElement])
+            playing = True
+        else:
+            if playing == True:
+                player.pause()
+                playing = False
+            else:
+                player.play()
+                playing = True
 
 def actionPressKeyEnter():
     global activeMode, selectMode, player
+    global podcastList, podcastTitle, podcastName, podcastUrl, currentPodcast, currentElement, totalElements
     if activeMode == 0:  # mainMenu
         activeMode = selectMode
         if activeMode == 0:
@@ -222,6 +274,9 @@ def actionPressKeyEnter():
                 selectItem = 'файл: ' + selectItem + str(currentNumberFile + 1) + ' из ' + str(countFiles)
         elif activeMode == 2:
             selectItem = stationName[stationNumber] + '. ' + str(stationNumber+1) + ' из ' + str(len(station))
+        elif activeMode == 3:
+            parsePodcast()
+            selectItem = podcastTitle + '. ' + str(currentPodcast +1) + ' из ' + str(len(podcastList))
         if activeMode == 0:
             command = 'echo ' + selectItem + ' | RHVoice-test -p aleksandr'
         else:
@@ -240,19 +295,40 @@ def actionPressKeyEnter():
             quitPlayer()
         else:
             playFile(station[stationNumber])
+    elif activeMode == 3:  #  all podcasts
+        activeMode = 4
+        selectItem = podcastName[currentElement] + '. ' + str(currentElement +1) + ' из ' + str(totalElements)
+        command = 'echo ' + podcastTitle + '. Выбрано: ' + selectItem + ' | RHVoice-test -p aleksandr'
+        os.system(command)
+    elif activeMode == 4:  # current podcast
+        if player == None:
+            playFile(podcastUrl[currentElement])
+            playing = True
+        else:
+            if playing == True:
+                player.pause()
+                playing = False
+            else:
+                player.play()
+                playing = True
 
 def actionPressKeyLeft():
     print('left')
     global activeMode, selectMode
-    if activeMode != 0:
+    global podcastList, podcastTitle, podcastName, podcastUrl, currentPodcast, currentElement, totalElements
+    if activeMode < 4:
         activeMode = 0
-        quitPlayer()
-    command = 'echo ' + translateListModes[selectMode] + ' | RHVoice-test -p aleksandr'
+        command = 'echo ' + translateListModes[selectMode] + ' | RHVoice-test -p aleksandr'
+    if activeMode == 4:
+        activeMode = 3
+        command = 'echo ' + translateListModes[activeMode] + '. ' + podcastTitle + '. ' + str(currentPodcast+1) + ' из ' + str(len(podcastList)) + ' | RHVoice-test -p aleksandr'
+    quitPlayer()
     os.system(command)
 
 def actionPressKeyRight():
     print('right')
     global activeMode, selectMode
+    global podcastList, podcastTitle, podcastName, podcastUrl, currentPodcast, currentElement, totalElements
     if activeMode == 0:
         activeMode = selectMode
         if activeMode == 1:
@@ -262,11 +338,19 @@ def actionPressKeyRight():
                 command = 'echo ' + str(currentNumberFile + 1) + ' из ' + str(countFiles) + ' файл: ' + files[currentNumberFile] + ' | RHVoice-test -p aleksandr'
         elif activeMode == 2:
             command = 'echo ' + str(stationNumber + 1) + ' из ' + str(len(station)) + stationName[stationNumber] + ' | RHVoice-test -p aleksandr'
-        os.system(command)
+        elif activeMode == 3:
+            parsePodcast()
+            command = 'echo ' + translateListModes[activeMode] + '. Выбрано: ' + podcastTitle + '. ' + str(currentPodcast +1) + ' из ' + str(len(podcastList)) + ' | RHVoice-test -p aleksandr'
+    elif activeMode == 3:  #  all podcasts
+        activeMode = 4
+        selectItem = podcastName[currentElement] + '. ' + str(currentElement +1) + ' из ' + str(totalElements)
+        command = 'echo ' + podcastTitle + '. Выбрано: ' + selectItem + ' | RHVoice-test -p aleksandr'
+    os.system(command)
 
 def actionPressKeyUp():
     print('up')                
     global currentNumberFile, selectMode, stationNumber, player, playing
+    global podcastList, podcastTitle, podcastName, podcastUrl, currentPodcast, currentElement, totalElements
     if activeMode == 0:  # main menu
         if selectMode > 0:
             selectMode -= 1
@@ -290,10 +374,27 @@ def actionPressKeyUp():
                 if player != None:
                     quitPlayer()
                     playFile(station[stationNumber])
+    elif activeMode == 3:  # all podcasts
+        if currentPodcast > 0:
+            currentPodcast -= 1
+            parsePodcast()
+            command = 'echo ' + podcastTitle + '. ' + str(currentPodcast + 1) + ' из ' + str(len(podcastList)) + ' | RHVoice-test -p aleksandr'
+            os.system(command)
+    elif activeMode == 4:  # current podcast
+        if currentElement > 0:
+            currentElement -= 1
+            if playing == False:
+                command = 'echo ' + podcastName[currentElement] + '. ' + str(currentElement + 1) + ' из ' + str(totalElements) + ' | RHVoice-test -p aleksandr'
+                os.system(command)
+            else:
+                if player != None:
+                    quitPlayer()
+                    playFile(podcastUrl[currentElement])
 
 def actionPressKeyDown():
     print('down')
     global currentNumberFile, selectMode, stationNumber, player, playing
+    global podcastList, podcastTitle, podcastName, podcastUrl, currentPodcast, currentElement, totalElements
     if activeMode == 0:  # main menu
         if selectMode < countModess-1:
             selectMode += 1
@@ -317,6 +418,22 @@ def actionPressKeyDown():
                 if player != None:
                     quitPlayer()
                     playFile(station[stationNumber])
+    elif activeMode == 3:  # all podcasts
+        if currentPodcast < len(podcastList):
+            currentPodcast += 1
+            parsePodcast()
+            command = 'echo ' + podcastTitle + '. ' + str(currentPodcast + 1) + ' из ' + str(len(podcastList)) + ' | RHVoice-test -p aleksandr'
+            os.system(command)
+    elif activeMode == 4:  # current podcast
+        if currentElement < totalElements:
+            currentElement += 1
+            if playing == False:
+                command = 'echo ' + podcastName[currentElement] + '. ' + str(currentElement + 1) + ' из ' + str(totalElements) + ' | RHVoice-test -p aleksandr'
+                os.system(command)
+            else:
+                if player != None:
+                    quitPlayer()
+                    playFile(podcastUrl[currentElement])
 
 def quitPlayer():
     global player, playing
