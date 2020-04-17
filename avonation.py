@@ -1,8 +1,8 @@
 #Player for online radiostation and audiofiles.
-#version 0.1.0 date 26.03.20
+#version 0.2.0 date 17.04.2020
 # Denis Rybin https://github.com/rybinden/avonation
 
-import os, evdev, time, glob, requests
+import os, evdev, time, glob, requests, json
 from datetime import datetime
 from omxplayer.player import OMXPlayer
 from xml.etree import ElementTree
@@ -13,14 +13,14 @@ countModess = len(listModes)
 activeMode = 0
 selectMode = 0
 
-station = [
-'http://mds-station.com:8000/mds',
-'http://212.75.194.94:8000/KemMayakFM',
-'http://icecast.vgtrk.cdnvideo.ru/vestifm_aac_64kbps',
-'http://ic7.101.ru:8000/v11_1'
-]
-stationName = ['mds', 'Маяк', 'Вести фм', 'comedy']
+stationName = []
+station = [] #url
 stationNumber = 0
+with open('radio.txt', 'r', encoding='utf-8') as f:
+    for item in f.readlines():
+        data = json.loads(item)
+        stationName.append(data['name'])
+        station.append(data['url'])
 
 podcastList = []
 podcastTitle = ''
@@ -51,7 +51,6 @@ def parsePodcast():
         currentElement += 1
     currentElement = 0
 
-# сделать функцию как в подкастах парсер
 files = []
 totalObject = glob.glob('*')
 for item in totalObject:
