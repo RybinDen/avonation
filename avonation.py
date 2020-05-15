@@ -1,5 +1,5 @@
 #Player for online radiostation and audiofiles.
-#version 0.2.0 date 17.04.2020
+#version 0.2.1 date 15.05.2020
 # Denis Rybin https://github.com/rybinden/avonation
 
 import os, evdev, time, glob, requests, json
@@ -36,11 +36,14 @@ def parsePodcast():
         with open('podcast.txt') as f:
             podcastList = f.read().splitlines()
 
+    podcastName.clear()
+    podcastUrl.clear()
+    if currentElement != 0:
+        currentElement = 0
+
     response = requests.get(podcastList[currentPodcast])
     root = ElementTree.fromstring(response.text)
     podcastTitle = root.findtext('channel/title')
-    if currentElement != 0:
-        currentElement = 0
     for item in root.findall('channel/item'):
         if currentElement == totalElements:
             break
@@ -220,7 +223,7 @@ def actionPressKeySpace():
             parsePodcast()
             selectItem = podcastTitle + '. ' + str(currentPodcast +1) + ' из ' + str(len(podcastList))
         if activeMode == 0:
-            command = 'echo ' + selectItem + ' | RHVoice-test -p aleksandr'
+            command = 'echo "' + selectItem + '" | RHVoice-test -p aleksandr'
         else:
             command = 'echo включаю ' + translateListModes[activeMode] + '. Выбрано: ' + selectItem + ' | RHVoice-test -p aleksandr'
         os.system(command)
@@ -244,19 +247,23 @@ def actionPressKeySpace():
     elif activeMode == 3:  #  all podcasts
         activeMode = 4
         selectItem = podcastName[currentElement] + '. ' + str(currentElement +1) + ' из ' + str(totalElements)
-        command = 'echo ' + podcastTitle + '. Выбрано: ' + selectItem + ' | RHVoice-test -p aleksandr'
+        command = 'echo "' + podcastTitle + '. Выбрано: ' + selectItem + '" | RHVoice-test -p aleksandr'
         os.system(command)
     elif activeMode == 4:  # current podcast
-        if player == None:
-            playFile(podcastUrl[currentElement])
-            playing = True
+        if not podcastName:
+            command = 'echo "Этот подкаст не имеет аудио версии" | RHVoice-test -p aleksandr'
+            os.system(command)
         else:
-            if playing == True:
-                player.pause()
-                playing = False
-            else:
-                player.play()
+            if player == None:
+                playFile(podcastUrl[currentElement])
                 playing = True
+            else:
+                if playing == True:
+                    player.pause()
+                    playing = False
+                else:
+                    player.play()
+                    playing = True
 
 def actionPressKeyEnter():
     global activeMode, selectMode, player
@@ -277,9 +284,9 @@ def actionPressKeyEnter():
             parsePodcast()
             selectItem = podcastTitle + '. ' + str(currentPodcast +1) + ' из ' + str(len(podcastList))
         if activeMode == 0:
-            command = 'echo ' + selectItem + ' | RHVoice-test -p aleksandr'
+            command = 'echo "' + selectItem + '" | RHVoice-test -p aleksandr'
         else:
-            command = 'echo включаю ' + translateListModes[activeMode] + '. Выбрано: ' + selectItem + ' | RHVoice-test -p aleksandr'
+            command = 'echo "включаю ' + translateListModes[activeMode] + '. Выбрано: ' + selectItem + '" | RHVoice-test -p aleksandr'
         os.system(command)
     elif activeMode == 1:  # player
         if player == None:
@@ -297,7 +304,7 @@ def actionPressKeyEnter():
     elif activeMode == 3:  #  all podcasts
         activeMode = 4
         selectItem = podcastName[currentElement] + '. ' + str(currentElement +1) + ' из ' + str(totalElements)
-        command = 'echo ' + podcastTitle + '. Выбрано: ' + selectItem + ' | RHVoice-test -p aleksandr'
+        command = 'echo "' + podcastTitle + '. Выбрано: ' + selectItem + '" | RHVoice-test -p aleksandr'
         os.system(command)
     elif activeMode == 4:  # current podcast
         if player == None:
@@ -317,33 +324,42 @@ def actionPressKeyLeft():
     global podcastList, podcastTitle, podcastName, podcastUrl, currentPodcast, currentElement, totalElements
     if activeMode < 4:
         activeMode = 0
-        command = 'echo ' + translateListModes[selectMode] + ' | RHVoice-test -p aleksandr'
+        command = 'echo "' + translateListModes[selectMode] + '" | RHVoice-test -p aleksandr'
     if activeMode == 4:
         activeMode = 3
-        command = 'echo ' + translateListModes[activeMode] + '. ' + podcastTitle + '. ' + str(currentPodcast+1) + ' из ' + str(len(podcastList)) + ' | RHVoice-test -p aleksandr'
+        command = 'echo "' + translateListModes[activeMode] + '. ' + podcastTitle + '. ' + str(currentPodcast+1) + ' из ' + str(len(podcastList)) + '" | RHVoice-test -p aleksandr'
     quitPlayer()
     os.system(command)
 
 def actionPressKeyRight():
     print('right')
     global activeMode, selectMode
-    global podcastList, podcastTitle, podcastName, podcastUrl, currentPodcast, currentElement, totalElements
+    global podcastList, podcastTitle, podcastName, podcastUrl, currentPodcast, currentElement, totalElements, selectItem
     if activeMode == 0:
         activeMode = selectMode
         if activeMode == 1:
             if os.path.isdir(files[currentNumberFile]):
-                command = 'echo ' + str(currentNumberFile + 1) + ' из ' + str(countFiles) + ' директория: ' + files[currentNumberFile] + ' | RHVoice-test -p aleksandr'
+                command = 'echo "' + str(currentNumberFile + 1) + ' из ' + str(countFiles) + ' директория: ' + files[currentNumberFile] + '" | RHVoice-test -p aleksandr'
             else:    
-                command = 'echo ' + str(currentNumberFile + 1) + ' из ' + str(countFiles) + ' файл: ' + files[currentNumberFile] + ' | RHVoice-test -p aleksandr'
+                command = 'echo "' + str(currentNumberFile + 1) + ' из ' + str(countFiles) + ' файл: ' + files[currentNumberFile] + '" | RHVoice-test -p aleksandr'
         elif activeMode == 2:
-            command = 'echo ' + str(stationNumber + 1) + ' из ' + str(len(station)) + stationName[stationNumber] + ' | RHVoice-test -p aleksandr'
+            command = 'echo "' + str(stationNumber + 1) + ' из ' + str(len(station)) + stationName[stationNumber] + '" | RHVoice-test -p aleksandr'
         elif activeMode == 3:
             parsePodcast()
-            command = 'echo ' + translateListModes[activeMode] + '. Выбрано: ' + podcastTitle + '. ' + str(currentPodcast +1) + ' из ' + str(len(podcastList)) + ' | RHVoice-test -p aleksandr'
+            command = 'echo "' + translateListModes[activeMode] + '. Выбрано: ' + podcastTitle + '. ' + str(currentPodcast +1) + ' из ' + str(len(podcastList)) + '" | RHVoice-test -p aleksandr'
     elif activeMode == 3:  #  all podcasts
         activeMode = 4
-        selectItem = podcastName[currentElement] + '. ' + str(currentElement +1) + ' из ' + str(totalElements)
-        command = 'echo ' + podcastTitle + '. Выбрано: ' + selectItem + ' | RHVoice-test -p aleksandr'
+        if not podcastName:
+            command = 'echo "Этот подкаст не имеет аудио версии" | RHVoice-test -p aleksandr'
+        else:
+            selectItem = podcastName[currentElement] + '. ' + str(currentElement +1) + ' из ' + str(totalElements)
+            command = 'echo "' + podcastTitle + '. Выбрано: ' + selectItem + '" | RHVoice-test -p aleksandr'
+    elif activeMode == 4:  #  current podcasts
+        if not podcastName:
+            command = 'echo "Этот подкаст не имеет аудио версии" | RHVoice-test -p aleksandr'
+        else:
+            selectItem = podcastName[currentElement] + '. ' + str(currentElement +1) + ' из ' + str(totalElements)
+            command = 'echo "' + podcastTitle + '. Выбрано: ' + selectItem + '" | RHVoice-test -p aleksandr'
     os.system(command)
 
 def actionPressKeyUp():
@@ -353,21 +369,21 @@ def actionPressKeyUp():
     if activeMode == 0:  # main menu
         if selectMode > 0:
             selectMode -= 1
-        command = 'echo ' + translateListModes[selectMode] + ' | RHVoice-test -p aleksandr'
+        command = 'echo "' + translateListModes[selectMode] + '" | RHVoice-test -p aleksandr'
         os.system(command)
     elif activeMode == 1:  # player
         if currentNumberFile>0:
             currentNumberFile -= 1
         if os.path.isdir(files[currentNumberFile]):
-            command = 'echo ' + str(currentNumberFile + 1) + ' из ' + str(countFiles) + ' директория: ' + files[currentNumberFile] + ' | RHVoice-test -p aleksandr'
+            command = 'echo "' + str(currentNumberFile + 1) + ' из ' + str(countFiles) + ' директория: ' + files[currentNumberFile] + '" | RHVoice-test -p aleksandr'
         else:    
-            command = 'echo ' + str(currentNumberFile + 1) + ' из ' + str(countFiles) + ' файл: ' + files[currentNumberFile] + ' | RHVoice-test -p aleksandr'
+            command = 'echo "' + str(currentNumberFile + 1) + ' из ' + str(countFiles) + ' файл: ' + files[currentNumberFile] + '" | RHVoice-test -p aleksandr'
         os.system(command)
     elif activeMode == 2:  # radio
         if stationNumber > 0:
             stationNumber -= 1
             if playing == False:
-                command = 'echo ' + str(stationNumber + 1) + ' из ' + str(len(station)) + stationName[stationNumber] + ' | RHVoice-test -p aleksandr'
+                command = 'echo "' + str(stationNumber + 1) + ' из ' + str(len(station)) + stationName[stationNumber] + '" | RHVoice-test -p aleksandr'
                 os.system(command)
             else:
                 if player != None:
@@ -377,18 +393,25 @@ def actionPressKeyUp():
         if currentPodcast > 0:
             currentPodcast -= 1
             parsePodcast()
-            command = 'echo ' + podcastTitle + '. ' + str(currentPodcast + 1) + ' из ' + str(len(podcastList)) + ' | RHVoice-test -p aleksandr'
+            command = 'echo "' + podcastTitle + '. ' + str(currentPodcast + 1) + ' из ' + str(len(podcastList)) + '" | RHVoice-test -p aleksandr'
             os.system(command)
     elif activeMode == 4:  # current podcast
         if currentElement > 0:
             currentElement -= 1
             if playing == False:
-                command = 'echo ' + podcastName[currentElement] + '. ' + str(currentElement + 1) + ' из ' + str(totalElements) + ' | RHVoice-test -p aleksandr'
+                if podcastName != []:
+                    command = 'echo "' + podcastName[currentElement] + '. ' + str(currentElement + 1) + ' из ' + str(totalElements) + '" | RHVoice-test -p aleksandr'
+                else:
+                    command = 'echo "У этого подкаста нет аудио версии" | RHVoice-test -p aleksandr'
                 os.system(command)
             else:
                 if player != None:
                     quitPlayer()
-                    playFile(podcastUrl[currentElement])
+                    if podcastName != []:
+                        playFile(podcastUrl[currentElement])
+                    else:
+                        command = 'echo "У этого подкаста нет аудио версии" | RHVoice-test -p aleksandr'
+                        os.system(command)
 
 def actionPressKeyDown():
     print('down')
@@ -397,21 +420,21 @@ def actionPressKeyDown():
     if activeMode == 0:  # main menu
         if selectMode < countModess-1:
             selectMode += 1
-        command = 'echo ' + translateListModes[selectMode] + ' | RHVoice-test -p aleksandr'
+        command = 'echo "' + translateListModes[selectMode] + '" | RHVoice-test -p aleksandr'
         os.system(command)
     elif activeMode == 1:  # player
         if currentNumberFile < (countFiles -1):
             currentNumberFile += 1
         if os.path.isdir(files[currentNumberFile]):
-            command = 'echo ' + str(currentNumberFile + 1) + ' из ' + str(countFiles) + ' директория: ' + files[currentNumberFile] + ' | RHVoice-test -p aleksandr'
+            command = 'echo "' + str(currentNumberFile + 1) + ' из ' + str(countFiles) + ' директория: ' + files[currentNumberFile] + '" | RHVoice-test -p aleksandr'
         else:
-            command = 'echo ' + str(currentNumberFile + 1) + ' из ' + str(countFiles) + ' файл: ' + files[currentNumberFile] + ' | RHVoice-test -p aleksandr'
+            command = 'echo "' + str(currentNumberFile + 1) + ' из ' + str(countFiles) + ' файл: ' + files[currentNumberFile] + '" | RHVoice-test -p aleksandr'
         os.system(command)
     elif activeMode == 2:  # radio
         if stationNumber <len(station)-1:
             stationNumber += 1
             if playing == False:
-                command = 'echo ' + str(stationNumber + 1) + ' из ' + str(len(station)) + stationName[stationNumber] + ' | RHVoice-test -p aleksandr'
+                command = 'echo "' + str(stationNumber + 1) + ' из ' + str(len(station)) + stationName[stationNumber] + '" | RHVoice-test -p aleksandr'
                 os.system(command)
             else:
                 if player != None:
@@ -421,18 +444,25 @@ def actionPressKeyDown():
         if currentPodcast < len(podcastList):
             currentPodcast += 1
             parsePodcast()
-            command = 'echo ' + podcastTitle + '. ' + str(currentPodcast + 1) + ' из ' + str(len(podcastList)) + ' | RHVoice-test -p aleksandr'
+            command = 'echo "' + podcastTitle + '. ' + str(currentPodcast + 1) + ' из ' + str(len(podcastList)) + '" | RHVoice-test -p aleksandr'
             os.system(command)
     elif activeMode == 4:  # current podcast
         if currentElement < totalElements:
             currentElement += 1
             if playing == False:
-                command = 'echo ' + podcastName[currentElement] + '. ' + str(currentElement + 1) + ' из ' + str(totalElements) + ' | RHVoice-test -p aleksandr'
+                if podcastName != []:
+                    command = 'echo "' + podcastName[currentElement] + '. ' + str(currentElement + 1) + ' из ' + str(totalElements) + '" | RHVoice-test -p aleksandr'
+                else:
+                    command = 'echo "У этого подкаста нет аудио версии" | RHVoice-test -p aleksandr'
                 os.system(command)
             else:
                 if player != None:
                     quitPlayer()
-                    playFile(podcastUrl[currentElement])
+                    if podcastName != []:
+                        playFile(podcastUrl[currentElement])
+                    else:
+                        command = 'echo "У этого подкаста нет аудио версии" | RHVoice-test -p aleksandr'
+                        os.system(command)
 
 def quitPlayer():
     global player, playing
