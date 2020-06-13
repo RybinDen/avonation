@@ -1,11 +1,20 @@
 #Speaking audio player for raspberry pi.
-#version 0.3.0 date 24.05.2020
+#version 0.3.1 update 13.06.2020
 # Denis Rybin https://github.com/rybinden/avonation
 
 import os, evdev, time, glob, requests, json, youtube_dl
+import sys, logging
 from datetime import date, datetime
 from omxplayer.player import OMXPlayer
 from xml.etree import ElementTree
+logFile = "avonation.log"
+if len(sys.argv) == 2:
+    if sys.argv[1] == '-d' or sys.argv[1] == '--debug':
+        logging.basicConfig(level=logging.DEBUG, filename=logFile)
+    else:
+        logging.basicConfig(level=logging.ERROR, filename=logFile)
+else:
+    logging = None
 
 listModes = ['mainMenu', 'player', 'radio', 'podcast', 'youtube']
 translateListModes = ['Главное меню', 'Плеер', 'Радио', 'подкасты', 'ютуб']
@@ -301,10 +310,12 @@ def speakDate():
     os.system(command)
 
 def actionPressKeySpace():
-    print('space')
     global activeMode, selectMode, player, playing
     global podcastList, podcastTitle, podcastName, podcastUrl, currentPodcast, currentElement, totalElements
     global channelList, currentChannel, channelTitle, youtubeVideoUrl, youtubeAudioUrl
+    if logging != None:
+        logger = logging.getLogger(listModes[activeMode])
+        logger.debug('press space')
     if activeMode == 0:  # mainMenu
         activeMode = selectMode
         if activeMode == 0:
@@ -328,7 +339,6 @@ def actionPressKeySpace():
             command = 'echo включаю ' + translateListModes[activeMode] + '. Выбрано: ' + selectItem + ' | RHVoice-test -p aleksandr'
         os.system(command)
     elif activeMode == 1:  # player
-        print(currentNumberFile)
         if player == None:
             playFile(files[currentNumberFile])
             playing = True
@@ -371,8 +381,6 @@ def actionPressKeySpace():
                     playing = True
     elif activeMode == 6:  # current youtube file
         if player == None:
-            #print('url ', youtubeAudioUrl)
-            #exit()
             playFile(youtubeAudioUrl)
             playing = True
         else:
@@ -456,10 +464,12 @@ def actionPressKeyEnter():
                 playing = True
 
 def actionPressKeyLeft():
-    print('left')
     global activeMode, selectMode
     global podcastList, podcastTitle, podcastName, podcastUrl, currentPodcast, currentElement, totalElements
     global channelList, currentChannel, channelTitle, youtubeVideoUrl, youtubeAudioUrl
+    if logging != None:
+        logger = logging.getLogger(listModes[activeMode])
+        logger.debug('press left')
     if activeMode < len(listModes):
         activeMode = 0
         command = 'echo "' + translateListModes[selectMode] + '" | RHVoice-test -p aleksandr'
@@ -475,10 +485,12 @@ def actionPressKeyLeft():
     os.system(command)
 
 def actionPressKeyRight():
-    print('right')
     global activeMode, selectMode
     global podcastList, podcastTitle, podcastName, podcastUrl, currentPodcast, currentElement, totalElements, selectItem
     global channelList, currentChannel, channelTitle, youtubeVideoUrl, youtubeAudioUrl
+    if logging != None:
+        logger = logging.getLogger(listModes[activeMode])
+        logger.debug('press right')
     if activeMode == 0:
         activeMode = selectMode
         if activeMode == 1:
@@ -517,7 +529,9 @@ def actionPressKeyRight():
     os.system(command)
 
 def actionPressKeyUp():
-    print('up')                
+    if logging != None:
+        logger = logging.getLogger(listModes[activeMode])
+        logger.debug('press up')
     global currentNumberFile, selectMode, stationNumber, player, playing
     global podcastList, podcastTitle, podcastName, podcastUrl, currentPodcast, currentElement, totalElements
     global channelList, currentChannel, channelTitle, youtubeVideoUrl, youtubeAudioUrl
@@ -585,7 +599,9 @@ def actionPressKeyUp():
                 playFile(youtubeAudioUrl)
 
 def actionPressKeyDown():
-    print('down')
+    if logging != None:
+        logger = logging.getLogger(listModes[activeMode])
+        logger.debug('press down')
     global currentNumberFile, selectMode, stationNumber, player, playing
     global podcastList, podcastTitle, podcastName, podcastUrl, currentPodcast, currentElement, totalElements
     global channelList, currentChannel, channelTitle, youtubeVideoUrl, youtubeAudioUrl
@@ -660,10 +676,14 @@ def quitPlayer():
         if playing != False:
             playing = False
         player.quit()
-    print('Exit')
+    if logging != None:
+        logger = logging.getLogger(listModes[activeMode])
+        logger.debug('exit player')
 
 def playerExit(code):
-    print('exit',code)
+    if logging != None:
+        logger = logging.getLogger(listModes[activeMode])
+        logger.debug('exit code player: %s', code)
     global playing, player
     playing=False
     player = None
@@ -676,8 +696,10 @@ def playFile(url):
         player.exitEvent += lambda _, exit_code: playerExit(exit_code)
     else:
         player.load(url)
-    print('Playing:', url)
     playing=True
+    if logging != None:
+        logger = logging.getLogger(listModes[activeMode])
+        logger.debug('playing: %s', url)
 
 def getDevice():
     for fn in evdev.list_devices():
@@ -689,11 +711,12 @@ def getDevice():
     raise IOError('No keyboard found')
 
 dev = getDevice()
-print(dev)
+if logging != None:
+    logger = logging.getLogger(listModes[activeMode])
+    logger.debug(dev)
 
 for ev in dev.read_loop():
     if ev.type == evdev.ecodes.EV_KEY:
-        #print(evdev.categorize(ev))
         active=dev.active_keys()
         if evdev.ecodes.KEY_LEFTCTRL in active and (evdev.ecodes.KEY_X in active or evdev.ecodes.KEY_C in active):
            quitPlayer()           
