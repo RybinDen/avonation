@@ -118,7 +118,7 @@ def parseYoutubeVideo():
         r = ydl.extract_info(youtubeVideoUrl[currentElement], download=False) # Вставляем нашу ссылку с ютуба
     youtubeAudioUrl = r['url']
     message += r['title'] + ' '
-    message += 'Просмотров: ' + str(r['view_count'])
+    message += 'Просмотров: ' + str(r['view_count']) + '. '
     upload_date = r['upload_date']
     uploadDate = date(int(upload_date[:4]), int(upload_date[4:6]), int(upload_date[6:8]))
     delta = today - uploadDate
@@ -154,7 +154,7 @@ def parseYoutubeVideo():
         else:
             message += uploadDate.year
 
-    message += ' длилтельность '
+    message += '. Длилтельность: '
     h, m, s = 0, 0, 0
     duration = r['duration']
     m = duration // 60
@@ -163,11 +163,11 @@ def parseYoutubeVideo():
         m = m % 60
     s = duration % 60
     if h:
-        message += str(h) + ' час '
+        message += str(h) + ' час, '
     if m:
         message += str(m) + ' мин. '
     if s:
-        message += str(s) + ' сек '
+        message += str(s) + ' сек. '
     return message
 
 def parsePodcast():
@@ -236,108 +236,67 @@ def speakTime():
 def speakDate():
     time_checker = datetime.now()
     day = time_checker.day
-    if day == 1:
-        d = 'первое'
-    elif day == 2:
-        d = 'второе'
-    elif day == 3:
-        d = 'третье'
-    elif day == 4:
-        d = 'четвертое'
-    elif day == 5:
-        d = 'пятое'
-    elif day == 6:
-        d = 'шестое'
-    elif day == 7:
-        d = 'седьмое'
-    elif day == 8:
-        d = 'восьмое'
-    elif day == 9:
-        d = 'девятое'
-    elif day == 10:
-        d = 'десятое'
-    elif day == 11:
-        d = 'одиннадцатое'
-    elif day == 12:
-        d = 'двенадцатое'
-    elif day == 13:
-        d = 'тринадцатое'
-    elif day == 14:
-        d = 'четырнадцатое'
-    elif day == 15:
-        d = 'пятнадцатое'
-    elif day == 16:
-        d = 'шестнадцатое'
-    elif day == 17:
-        d = 'семнадцатое'
-    elif day == 18:
-        d = 'восемнадцатое'
-    elif day == 19:
-        d = 'деветнадцатое'
-    elif day == 20:
-        d = 'двадцатое'
-    elif day == 21:
-        d = 'двадцать первое'
-    elif day == 22:
-       d = 'двадцать второе'
-    elif day == 23:
-        d = 'двадцать третье'
-    elif day == 24:
-        d = 'двадцать четвертое'
-    elif day == 25:
-        d = 'двадцать пятое'
-    elif day == 26:
-        d = 'двадцать шестое'
-    elif day == 27:
-        d = 'двадцать седьмое'
-    elif day == 28:
-        d = 'двадцать восьмое'
-    elif day == 29:
-        d = 'двадцать девятое'
-    elif day == 30:
-        d = 'тридцатое'
-    elif day == 31:
-        d = 'тридцать первое'
+    daysName = (
+        'первое',
+        'второе',
+        'третье',
+        'четвертое',
+        'пятое',
+        'шестое',
+        'седьмое',
+        'восьмое',
+        'девятое',
+        'десятое',
+        'одиннадцатое',
+        'двенадцатое',
+        'тринадцатое',
+        'четырнадцатое',
+        'пятнадцатое',
+        'шестнадцатое',
+        'семнадцатое',
+        'восемнадцатое',
+        'деветнадцатое',
+        'двадцатое',
+        'двадцать первое',
+        'двадцать второе',
+        'двадцать третье',
+        'двадцать четвертое',
+        'двадцать пятое',
+        'двадцать шестое',
+        'двадцать седьмое',
+        'двадцать восьмое',
+        'двадцать девятое',
+        'тридцатое',
+        'тридцать первое'
+    )
+    d = daysName[day-1]
     month = time_checker.month
-    if month == 1:
-        m = 'Января'
-    elif month == 2:
-        m = 'февраля'
-    elif month == 3:
-        m = 'марта'
-    elif month == 4:
-        m = 'апреля'
-    elif month == 5:
-        m = 'мая'
-    elif month == 6:
-        m = 'июня'
-    elif month == 7:
-       m = 'июля'
-    elif month == 8:
-        m = 'августа'
-    elif month == 9:
-        m = 'сентября'
-    elif month == 10:
-        m = 'октября'
-    elif month == 11:
-        m = 'ноября'
-    elif month == 12:
-        m = 'векабря'
+    monthName = (
+        'Января',
+        'февраля',
+        'марта',
+        'апреля',
+        'мая',
+        'июня',
+        'июля',
+        'августа',
+        'сентября',
+        'октября',
+        'ноября',
+        'векабря'
+    )
+    m = monthName[month-1]
     weekday = time_checker.weekday()
-    if weekday == 0:
-            w = 'понедельник'
-    elif weekday == 1:
-        w = 'вторник'
-    elif weekday == 2:
-        w = 'среда'
-    elif weekday == 3:
-        w = 'четверг'
-    elif weekday == 4:
-        w = 'пятница'
-    elif weekday == 5:
-        w = 'суббота'
-    elif weekday == 6:
-        w = 'воскресенье'
+    weekdayName = (
+        'понедельник',
+        'вторник',
+        'среда',
+        'четверг',
+        'пятница',
+        'суббота',
+        'воскресенье'
+    )
+    w = weekdayName[weekday]
     speak('дата: ' + d + ' ' + m + ', ' + w)
 
 def actionPressKeySpace():
