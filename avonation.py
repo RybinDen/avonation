@@ -1,13 +1,14 @@
 #Speaking audio player for raspberry pi.
-#version 0.3.1 update 13.06.2020
+#version 0.4.0 update 30.06.2020
 # Denis Rybin https://github.com/rybinden/avonation
 
 import os, evdev, time, glob, requests, json, youtube_dl
-import sys, logging
+import sys, logging, configparser
 from datetime import date, datetime
 from omxplayer.player import OMXPlayer
 from xml.etree import ElementTree
-logFile = "avonation.log"
+logFile = 'avonation.log'
+configFile = 'setting.conf'
 if len(sys.argv) == 2:
     if sys.argv[1] == '-d' or sys.argv[1] == '--debug':
         logging.basicConfig(level=logging.DEBUG, filename=logFile)
@@ -42,6 +43,39 @@ youtubeVideoUrl = []
 youtubeAudioUrl = ''  #current youtube audio link
 currentElement = 0
 totalElements = 10
+
+def create_config(configFile): # Create a config file
+    config = configparser.ConfigParser()
+    section = "general"
+    config.add_section(section)
+    config.set(section, "language", "ru")
+    config.set(section, "synthesizer", "espeak")
+    section = "espeak"
+    config.add_section(section)
+    config.set(section, "speed", "200")
+    config.set(section, "pitch", "50")
+    config.set(section, "volume", "100")
+    section = "rhvoice"
+    config.add_section(section)
+    config.set(section, "voice", "aleksandr")
+    with open(configFile, "w") as config_file:
+        config.write(config_file)
+
+if not os.path.isfile(configFile):
+    create_config(configFile)
+def get_setting(configFile, section, setting): # Print out a setting
+    config = configparser.ConfigParser()
+    config.read(configFile)
+    value = config.get(section, setting)
+    return value
+
+def speak(text):
+    synthesizer = get_setting(configFile, "general", "synthesizer")
+    if synthesizer == 'espeak':
+        command = synthesizer + ' -v ' + get_setting(configFile, "general", "language") + ' -a ' + get_setting(configFile, synthesizer, "volume") + ' -p ' + get_setting(configFile, synthesizer, "pitch") + ' -s ' + get_setting(configFile, synthesizer, "speed") + ' "' + text + '"'
+    if synthesizer == 'rhvoice':
+        command = 'echo "' + text + '" | RHVoice-test -p ' + get_setting(configFile, synthesizer, "voice")
+    os.system(command)
 
 def parseYoutubeChannels():
     global channelList, channelTitle, youtubeVideoUrl, totalElements
@@ -173,8 +207,7 @@ currentNumberFile = 0
 player = None
 playing = False
 volume=0.5
-command = 'echo Авонация запущена. Режим: ' + translateListModes[activeMode] + ' | RHVoice-test -p aleksandr'
-os.system(command)
+speak('Авонация запущена. Режим: ' + translateListModes[activeMode])
 
 def increseVolume():
     global player, volume
@@ -198,8 +231,7 @@ def speakTime():
         m = '0' + str(minut)
     else:
         m = str(minut)
-    command = 'echo время: ' + str(hour) + ':' + m + ' | RHVoice-test -p aleksandr'
-    os.system(command)
+    speak('время: ' + str(hour) + ':' + m)
 
 def speakDate():
     time_checker = datetime.now()
@@ -306,8 +338,7 @@ def speakDate():
         w = 'суббота'
     elif weekday == 6:
         w = 'воскресенье'
-    command = 'echo дата: ' + d + ' ' + m + ', ' + w + ' | RHVoice-test -p aleksandr'
-    os.system(command)
+    speak('дата: ' + d + ' ' + m + ', ' + w)
 
 def actionPressKeySpace():
     global activeMode, selectMode, player, playing
@@ -320,7 +351,7 @@ def actionPressKeySpace():
         activeMode = selectMode
         if activeMode == 0:
             selectItem = translateListModes[activeMode]
-            command = 'echo "' + selectItem + '" | RHVoice-test -p aleksandr'
+            text = selectItem
         elif activeMode == 1:
             selectItem = files[currentNumberFile]
             if os.path.isdir(selectItem):
@@ -336,8 +367,8 @@ def actionPressKeySpace():
             parseYoutubeChannels()
             selectItem = channelTitle + '. ' + str(currentChannel +1) + ' из ' + str(len(channelList))
         else: #?
-            command = 'echo включаю ' + translateListModes[activeMode] + '. Выбрано: ' + selectItem + ' | RHVoice-test -p aleksandr'
-        os.system(command)
+            text = 'включаю ' + translateListModes[activeMode] + '. Выбрано: ' + selectItem
+        speak(text)
     elif activeMode == 1:  # player
         if player == None:
             playFile(files[currentNumberFile])
@@ -357,17 +388,14 @@ def actionPressKeySpace():
     elif activeMode == 3:  #  all podcasts
         activeMode = 5
         selectItem = podcastName[currentElement] + '. ' + str(currentElement +1) + ' из ' + str(totalElements)
-        command = 'echo "' + podcastTitle + '. Выбрано: ' + selectItem + '" | RHVoice-test -p aleksandr'
-        os.system(command)
+        speak(podcastTitle + '. Выбрано: ' + selectItem)
     elif activeMode == 4:  #  all channel
         activeMode = 6
         selectItem = parseYoutubeVideo()
-        command = 'echo "' + channelTitle + '. Выбрано: ' + selectItem + '" | RHVoice-test -p aleksandr'
-        os.system(command)
+        speak(channelTitle + '. Выбрано: ' + selectItem)
     elif activeMode == 5:  # current podcast
         if not podcastName:
-            command = 'echo "Этот подкаст не имеет аудио версии" | RHVoice-test -p aleksandr'
-            os.system(command)
+            speak('Этот подкаст не имеет аудио версии')
         else:
             if player == None:
                 playFile(podcastUrl[currentElement])
@@ -399,7 +427,7 @@ def actionPressKeyEnter():
         activeMode = selectMode
         if activeMode == 0:
             selectItem = translateListModes[activeMode]
-            command = 'echo "' + selectItem + '" | RHVoice-test -p aleksandr'
+            text = selectItem
         if activeMode == 1:
             selectItem = files[currentNumberFile]
             if os.path.isdir(selectItem):
@@ -415,8 +443,8 @@ def actionPressKeyEnter():
             parseYoutubeChannels()
             selectItem = channelTitle + '. ' + str(currentChannel +1) + ' из ' + str(len(channelList))
         else: #?
-            command = 'echo "включаю ' + translateListModes[activeMode] + '. Выбрано: ' + selectItem + '" | RHVoice-test -p aleksandr'
-        os.system(command)
+            text = 'включаю ' + translateListModes[activeMode] + '. Выбрано: ' + selectItem
+        speak(text)
     elif activeMode == 1:  # player
         if player == None:
             playFile(files[currentNumberFile])
@@ -433,13 +461,11 @@ def actionPressKeyEnter():
     elif activeMode == 3:  #  all podcasts
         activeMode = 5
         selectItem = podcastName[currentElement] + '. ' + str(currentElement +1) + ' из ' + str(totalElements)
-        command = 'echo "' + podcastTitle + '. Выбрано: ' + selectItem + '" | RHVoice-test -p aleksandr'
-        os.system(command)
+        speak(podcastTitle + '. Выбрано: ' + selectItem)
     elif activeMode == 4:  #  all channel
         activeMode = 6
         selectItem = parseYoutubeVideo()
-        command = 'echo "' + channelTitle + '. Выбрано: ' + selectItem + '" | RHVoice-test -p aleksandr'
-        os.system(command)
+        speak(channelTitle + '. Выбрано: ' + selectItem)
     elif activeMode == 5:  # current podcast
         if player == None:
             playFile(podcastUrl[currentElement])
@@ -472,17 +498,17 @@ def actionPressKeyLeft():
         logger.debug('press left')
     if activeMode < len(listModes):
         activeMode = 0
-        command = 'echo "' + translateListModes[selectMode] + '" | RHVoice-test -p aleksandr'
+        text = translateListModes[selectMode]
     if activeMode == 5:
         activeMode = 3
-        command = 'echo "' + translateListModes[activeMode] + '. ' + podcastTitle + '. ' + str(currentPodcast+1) + ' из ' + str(len(podcastList)) + '" | RHVoice-test -p aleksandr'
+        text = translateListModes[activeMode] + '. ' + podcastTitle + '. ' + str(currentPodcast+1) + ' из ' + str(len(podcastList))
     quitPlayer()
     if activeMode == 6:
         activeMode = 4
         currentElement = 0
-        command = 'echo "' + translateListModes[activeMode] + '. ' + channelTitle + '. ' + str(currentChannel+1) + ' из ' + str(len(channelList)) + '" | RHVoice-test -p aleksandr'
+        text = translateListModes[activeMode] + '. ' + channelTitle + '. ' + str(currentChannel+1) + ' из ' + str(len(channelList))
     quitPlayer()
-    os.system(command)
+    speak(text)
 
 def actionPressKeyRight():
     global activeMode, selectMode
@@ -495,38 +521,38 @@ def actionPressKeyRight():
         activeMode = selectMode
         if activeMode == 1:
             if os.path.isdir(files[currentNumberFile]):
-                command = 'echo "' + str(currentNumberFile + 1) + ' из ' + str(countFiles) + ' директория: ' + files[currentNumberFile] + '" | RHVoice-test -p aleksandr'
+                text = str(currentNumberFile + 1) + ' из ' + str(countFiles) + ' директория: ' + files[currentNumberFile]
             else:    
-                command = 'echo "' + str(currentNumberFile + 1) + ' из ' + str(countFiles) + ' файл: ' + files[currentNumberFile] + '" | RHVoice-test -p aleksandr'
+                text = str(currentNumberFile + 1) + ' из ' + str(countFiles) + ' файл: ' + files[currentNumberFile]
         elif activeMode == 2:
-            command = 'echo "' + str(stationNumber + 1) + ' из ' + str(len(station)) + stationName[stationNumber] + '" | RHVoice-test -p aleksandr'
+            text = str(stationNumber + 1) + ' из ' + str(len(station)) + stationName[stationNumber]
         elif activeMode == 3:
             parsePodcast()
-            command = 'echo "' + translateListModes[activeMode] + '. Выбрано: ' + podcastTitle + '. ' + str(currentPodcast +1) + ' из ' + str(len(podcastList)) + '" | RHVoice-test -p aleksandr'
+            text = translateListModes[activeMode] + '. Выбрано: ' + podcastTitle + '. ' + str(currentPodcast +1) + ' из ' + str(len(podcastList))
         elif activeMode == 4:
             parseYoutubeChannels()
-            command = 'echo "' + translateListModes[activeMode] + '. Выбрано: ' + channelTitle + '. ' + str(currentChannel +1) + ' из ' + str(len(channelList)) + '" | RHVoice-test -p aleksandr'
+            text = translateListModes[activeMode] + '. Выбрано: ' + channelTitle + '. ' + str(currentChannel +1) + ' из ' + str(len(channelList))
     elif activeMode == 3:  #  all podcasts
         activeMode = 5
         if not podcastName:
-            command = 'echo "Этот подкаст не имеет аудио версии" | RHVoice-test -p aleksandr'
+            text = 'Этот подкаст не имеет аудио версии'
         else:
             selectItem = podcastName[currentElement] + '. ' + str(currentElement +1) + ' из ' + str(totalElements)
-            command = 'echo "' + podcastTitle + '. Выбрано: ' + selectItem + '" | RHVoice-test -p aleksandr'
+            text = podcastTitle + '. Выбрано: ' + selectItem
     elif activeMode == 4:  #  youtube mode
         activeMode = 6
         selectItem = parseYoutubeVideo()
-        command = 'echo "' + channelTitle + '. Выбрано: ' + selectItem + '" | RHVoice-test -p aleksandr'
+        text = channelTitle + '. Выбрано: ' + selectItem
     elif activeMode == 5:  #  current podcasts
         if not podcastName:
-            command = 'echo "Этот подкаст не имеет аудио версии" | RHVoice-test -p aleksandr'
+            text = 'Этот подкаст не имеет аудио версии'
         else:
             selectItem = podcastName[currentElement] + '. ' + str(currentElement +1) + ' из ' + str(totalElements)
-            command = 'echo "' + podcastTitle + '. Выбрано: ' + selectItem + '" | RHVoice-test -p aleksandr'
+            text = podcastTitle + '. Выбрано: ' + selectItem
     elif activeMode == 6:  #  current youtube file
         selectItem = parseYoutubeVideo()
-        command = 'echo "' + channelTitle + '. Выбрано: ' + selectItem + '" | RHVoice-test -p aleksandr'
-    os.system(command)
+        text = channelTitle + '. Выбрано: ' + selectItem
+    speak(text)
 
 def actionPressKeyUp():
     if logging != None:
@@ -538,22 +564,20 @@ def actionPressKeyUp():
     if activeMode == 0:  # main menu
         if selectMode > 0:
             selectMode -= 1
-        command = 'echo "' + translateListModes[selectMode] + '" | RHVoice-test -p aleksandr'
-        os.system(command)
+        speak(translateListModes[selectMode])
     elif activeMode == 1:  # player
         if currentNumberFile>0:
             currentNumberFile -= 1
         if os.path.isdir(files[currentNumberFile]):
-            command = 'echo "' + str(currentNumberFile + 1) + ' из ' + str(countFiles) + ' директория: ' + files[currentNumberFile] + '" | RHVoice-test -p aleksandr'
+            text = str(currentNumberFile + 1) + ' из ' + str(countFiles) + ' директория: ' + files[currentNumberFile]
         else:    
-            command = 'echo "' + str(currentNumberFile + 1) + ' из ' + str(countFiles) + ' файл: ' + files[currentNumberFile] + '" | RHVoice-test -p aleksandr'
-        os.system(command)
+            text = str(currentNumberFile + 1) + ' из ' + str(countFiles) + ' файл: ' + files[currentNumberFile]
+        speak(text)
     elif activeMode == 2:  # radio
         if stationNumber > 0:
             stationNumber -= 1
             if playing == False:
-                command = 'echo "' + str(stationNumber + 1) + ' из ' + str(len(station)) + stationName[stationNumber] + '" | RHVoice-test -p aleksandr'
-                os.system(command)
+                speak(str(stationNumber + 1) + ' из ' + str(len(station)) + stationName[stationNumber])
             else:
                 if player != None:
                     quitPlayer()
@@ -562,37 +586,33 @@ def actionPressKeyUp():
         if currentPodcast > 0:
             currentPodcast -= 1
             parsePodcast()
-            command = 'echo "' + podcastTitle + '. ' + str(currentPodcast + 1) + ' из ' + str(len(podcastList)) + '" | RHVoice-test -p aleksandr'
-            os.system(command)
+            speak(podcastTitle + '. ' + str(currentPodcast + 1) + ' из ' + str(len(podcastList)))
     elif activeMode == 4:  # all channels
         if currentChannel > 0:
             currentChannel -= 1
             parseYoutubeChannels()
-            command = 'echo "' + channelTitle + '. ' + str(currentChannel + 1) + ' из ' + str(len(channelList)) + '" | RHVoice-test -p aleksandr'
-            os.system(command)
+            speak(channelTitle + '. ' + str(currentChannel + 1) + ' из ' + str(len(channelList)))
     elif activeMode == 5:  # current podcast
         if currentElement > 0:
             currentElement -= 1
             if playing == False:
                 if podcastName != []:
-                    command = 'echo "' + podcastName[currentElement] + '. ' + str(currentElement + 1) + ' из ' + str(totalElements) + '" | RHVoice-test -p aleksandr'
+                    text = podcastName[currentElement] + '. ' + str(currentElement + 1) + ' из ' + str(totalElements)
                 else:
-                    command = 'echo "У этого подкаста нет аудио версии" | RHVoice-test -p aleksandr'
-                os.system(command)
+                    text = 'У этого подкаста нет аудио версии'
+                speak(text)
             else:
                 if player != None:
                     quitPlayer()
                     if podcastName != []:
                         playFile(podcastUrl[currentElement])
                     else:
-                        command = 'echo "У этого подкаста нет аудио версии" | RHVoice-test -p aleksandr'
-                        os.system(command)
+                        speak('У этого подкаста нет аудио версии')
     elif activeMode == 6:  # current youtube file
         if currentElement > 0:
             currentElement -= 1
             if playing == False:
-                command = 'echo "' + str(currentElement + 1) + ' из ' + str(totalElements) + ' ' + parseYoutubeVideo() + '" | RHVoice-test -p aleksandr'
-                os.system(command)
+                speak(str(currentElement + 1) + ' из ' + str(totalElements) + ' ' + parseYoutubeVideo())
             else:
                 if player != None:
                     quitPlayer()
@@ -608,22 +628,20 @@ def actionPressKeyDown():
     if activeMode == 0:  # main menu
         if selectMode < len(listModes)-1:
             selectMode += 1
-        command = 'echo "' + translateListModes[selectMode] + '" | RHVoice-test -p aleksandr'
-        os.system(command)
+        speak(translateListModes[selectMode])
     elif activeMode == 1:  # player
         if currentNumberFile < (countFiles -1):
             currentNumberFile += 1
         if os.path.isdir(files[currentNumberFile]):
-            command = 'echo "' + str(currentNumberFile + 1) + ' из ' + str(countFiles) + ' директория: ' + files[currentNumberFile] + '" | RHVoice-test -p aleksandr'
+            text = str(currentNumberFile + 1) + ' из ' + str(countFiles) + ' директория: ' + files[currentNumberFile]
         else:
-            command = 'echo "' + str(currentNumberFile + 1) + ' из ' + str(countFiles) + ' файл: ' + files[currentNumberFile] + '" | RHVoice-test -p aleksandr'
-        os.system(command)
+            text = str(currentNumberFile + 1) + ' из ' + str(countFiles) + ' файл: ' + files[currentNumberFile]
+        speak(text)
     elif activeMode == 2:  # radio
         if stationNumber <len(station)-1:
             stationNumber += 1
             if playing == False:
-                command = 'echo "' + str(stationNumber + 1) + ' из ' + str(len(station)) + stationName[stationNumber] + '" | RHVoice-test -p aleksandr'
-                os.system(command)
+                speak(str(stationNumber + 1) + ' из ' + str(len(station)) + stationName[stationNumber])
             else:
                 if player != None:
                     quitPlayer()
@@ -632,42 +650,37 @@ def actionPressKeyDown():
         if currentPodcast < len(podcastList):
             currentPodcast += 1
             parsePodcast()
-            command = 'echo "' + podcastTitle + '. ' + str(currentPodcast + 1) + ' из ' + str(len(podcastList)) + '" | RHVoice-test -p aleksandr'
-            os.system(command)
+            speak(podcastTitle + '. ' + str(currentPodcast + 1) + ' из ' + str(len(podcastList)))
     elif activeMode == 4:  # all channels
         if currentChannel < len(channelList)-1:
             currentChannel += 1
             parseYoutubeChannels()
-            command = 'echo "' + channelTitle + '. ' + str(currentChannel + 1) + ' из ' + str(len(channelList)) + '" | RHVoice-test -p aleksandr'
-            os.system(command)
+            speak(channelTitle + '. ' + str(currentChannel + 1) + ' из ' + str(len(channelList)))
     elif activeMode == 5:  # current podcast
         if currentElement < totalElements:
             currentElement += 1
             if playing == False:
                 if podcastName != []:
-                    command = 'echo "' + podcastName[currentElement] + '. ' + str(currentElement + 1) + ' из ' + str(totalElements) + '" | RHVoice-test -p aleksandr'
+                    text = podcastName[currentElement] + '. ' + str(currentElement + 1) + ' из ' + str(totalElements)
                 else:
-                    command = 'echo "У этого подкаста нет аудио версии" | RHVoice-test -p aleksandr'
-                os.system(command)
+                    text = 'У этого подкаста нет аудио версии'
+                speak(text)
             else:
                 if player != None:
                     quitPlayer()
                     if podcastName != []:
                         playFile(podcastUrl[currentElement])
                     else:
-                        command = 'echo "У этого подкаста нет аудио версии" | RHVoice-test -p aleksandr'
-                        os.system(command)
+                        speak('У этого подкаста нет аудио версии')
     elif activeMode == 6:  # current youtube file
         if currentElement < totalElements-1:
             currentElement += 1
             if playing == False:
-                command = 'echo "' + str(currentElement + 1) + ' из ' + str(totalElements) + ' ' + parseYoutubeVideo() + '" | RHVoice-test -p aleksandr'
-                os.system(command)
+                speak(str(currentElement + 1) + ' из ' + str(totalElements) + ' ' + parseYoutubeVideo())
             else:
                 if player != None:
                     quitPlayer()
-                command = 'echo "' + parseYoutubeVideo() + '" | RHVoice-test -p aleksandr'
-                os.system(command)
+                speak(parseYoutubeVideo())
                 playFile(youtubeAudioUrl)
 
 def quitPlayer():
