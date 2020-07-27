@@ -90,8 +90,8 @@ def parseYoutubeChannels():
     element = 0
     for item in root.findall(ns + 'entry'):
         if element < totalElements:
-            element += 1
             youtubeVideoUrl.insert(element, item.find(ns + 'link').get('href'))
+            element += 1
         else:
             break
 
@@ -175,12 +175,10 @@ def parsePodcast():
     if len(podcastList) == 0:
         with open('podcast.txt') as f:
             podcastList = f.read().splitlines()
-
     podcastName.clear()
     podcastUrl.clear()
     if currentElement != 0:
         currentElement = 0
-
     response = requests.get(podcastList[currentPodcast])
     root = ElementTree.fromstring(response.text)
     podcastTitle = root.findtext('channel/title')
