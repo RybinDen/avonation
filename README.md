@@ -1,46 +1,52 @@
-## Авонация это  говорящий плеер на python, для систем, основанных на linux.
+## Description
+Description for Russian [Описание на русском](https://github.com/rybinden/avonation/blob/master/readme-ru.md) 
+Avonation is a python console audio player for raspberry pi.
+Control is carried out using the keyboard.
 
-Этот плеер удобно использовать на raspberry pi, без подключения монитора.
-Управление осуществляется с помощью клавиатуры, с помощью клавиш со стрелками, озвучивает все действия с помощью синтезатора голоса.
+### Installing and starting
 
-### Функции:
-
-- Воспроизведение онлайн радиостанций, аудиофайлов.
-- Прослушивание аудио-подкастов.
-- Dоспроизведение файлов с youtube.
-- Воспроизведение даты и времени, клавиши t d.
-- Громкость плеера, клавиши 1, 2.
-- Активация элемента- клавиши вправо, пробел, enter.
-- Переход назад- клавиша влево.
-- Завершить работу скрипта leftCtrl + x;
-- Выключение компьютера, клавиша esc.
-
-Используется omxplayer, синтезатор RHVoice или espeak (выбор и настройка синтезатора в файле setting.conf).
-
-### Прослушивание радио
-
-Ссылки и название радиостанции должны храниться в файле radio.txt, который дожден быть в той же папке где находится этот скрипт. Каждая станция записывается с новой строки.
-Пример:
 ```
-{"name":"mds", "url":"http://mds-station.com:8000/mds"}
-{"name":"Маяк", "url":"http://212.75.194.94:8000/KemMayakFM"}
+python3 -m pip install -r requirements.txt
+python3 avonation.py
 ```
 
-### прослушивание mp3, wav файлов
+### Functions:
 
-Аудио файлы нужно положить в туже папку, где находится скрипт, воспроизводятся пока только по одному файлу.
+- Play online radio stations, audio files.
+- Listening to audio podcasts.
+- Play files from youtube.
+- Player volume, keys +, -.
+- Element activation - keys: L, right, space, enter.
+- Go backward - keys: J, left.
+- prev element: I, up
+-  next element: K, down
+- Exit the script: Q, ESC
 
-### Прослушивание подкастов
+For playback, omxplayer is used.
 
-Для прослушивания ваших любимых подкастов, нужно создать текстовый файл с названием podcast.txt, в этой же папке, где находится скрипт.
-В этом файле нужно записать ссылку на xml файл вашего подкаста.
-Можно указать несколько ссылок, каждая должна быть с новой строки.
-Скрипт с помощью синтезатора будет озвучивать название подкастов и их эпизодов.
+### Listening to the radio
 
-### Прослушивание youtube
+The radio station name and links should be stored in the "radiostations" file, which should be in the user folder. Each station is written on a new line, with a separator "	" tab between the name and link.
+Example:
+``,
+mds	http://mds-station.com:8000/mds
+маяк	http://212.75.194.94:8000/KemMayakFM
+``,
 
-Для прослушивания видео с определенных каналов youtube, создайте текстовый файл с названием youtube.txt, в этой же папке, где находится скрипт.
-В этом файле нужно записать идентификаторы каналов, которые вы хотите слушать.
-Каждый id канала должен быть с новой строки.
-Скрипт с помощью синтезатора будет озвучивать название канала и его файлов, количество просмотров, длительность, дату публикации в формате - 
-сегодня|вчера|позавчера|3 дня назад|...|на прошлой недели|в этом месяце|в прошлом месяце|monthName|year.
+### listening to mp3, wav files
+
+Audio files must be placed in the same folder where the script is located, so far only one file is played.
+
+### Listening to podcasts
+
+To listen to your favorite podcasts, you need to create a text file called podcast.txt in the same folder where the script is located.
+In this file, you need to write a link to the xml file of your podcast.
+You can specify several links, each must be on a new line.
+
+### Listening to youtube
+
+To listen to videos from your favorite youtube channels, create a text file called youtube.txt in the same folder as the script.
+In this file, you need to write down the identifiers of the channels that you want to listen to.
+Each channel id must be on a new line.
+The script will display the name of the channel and its files, the number of views, duration, publication date in the format -
+today | yesterday | the day before yesterday | 3 days ago | ... | last week | this month | last month | month | year.

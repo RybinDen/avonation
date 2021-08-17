@@ -1,9 +1,12 @@
-#Speaking audio player for raspberry pi.
-#version 0.5 update 06.10.2020
+#console audio player for raspberry pi.
+#version 1.0 update 16.08.2021
 # Denis Rybin https://github.com/rybinden/avonation
 
+import curses
 from avonation.app import App
-if __name__ == '__main__':
-    app = App()
-    app.loop()
 
+def main_wrapper(main_screen):
+    app = App(main_screen)
+    app.run()
+
+curses.wrapper(main_wrapper)
