@@ -119,7 +119,7 @@ class Action:
                 app.player.playFile(app.radio.station[app.radio.stationNumber])
         elif app.activeMode == 3:  #  all podcasts
             app.activeMode = 5
-            selectItem = app.podcast.podcastName[app.podcast.currentElement] + '. ' + str(app.currentElement +1) + ' из ' + str(app.totalElements)
+            selectItem = app.podcast.podcastName[app.podcast.currentElement] + '. ' + str(app.podcast.currentElement +1) + ' из ' + str(app.podcast.totalElements)
             text = app.podcast.podcastTitle + '. Выбрано: ' + selectItem
             app.display(text)
         elif app.activeMode == 4:  #  all channel
@@ -129,7 +129,7 @@ class Action:
             app.display(text)
         elif app.activeMode == 5:  # current podcast
             if app.player.player == None:
-                app.player.playFile(app.podcast.podcastUrl[currentElement])
+                app.player.playFile(app.podcast.podcastUrl[app.podcast.currentElement])
                 app.player.playing = True
             else:
                 if app.player.playing == True:
@@ -160,7 +160,7 @@ class Action:
         app.player.quitPlayer()
         if app.activeMode == 6:
             app.activeMode = 4
-            app.currentElement = 0
+            app.youtube.currentElement = 0
             text = app.listModes[app.activeMode] + '. ' + app.youtube.channelTitle + '. ' + str(app.youtube.currentChannel+1) + ' из ' + str(len(app.youtube.channelList))
         app.player.quitPlayer()
         app.display(text)
@@ -210,7 +210,7 @@ class Action:
                 app.selectMode -= 1
             text = app.listModes[app.selectMode]
             app.display(text)
-        elif app.activeMode == 1:  # app.player.player
+        elif app.activeMode == 1:  # player
             if app.player.currentNumberFile>0:
                 app.player.currentNumberFile -= 1
             if os.path.isdir(app.player.files[app.player.currentNumberFile]):
@@ -243,19 +243,21 @@ class Action:
                 text = app.youtube.channelTitle + '. ' + str(app.youtube.currentChannel + 1) + ' из ' + str(len(app.youtube.channelList))
                 app.display(text)
         elif app.activeMode == 5:  # current podcast
-            if currentElement > 0:
-                currentElement -= 1
+            if app.podcast.currentElement > 0:
+                app.podcast.currentElement -= 1
                 if app.player.playing == False:
-                    if podcastName != []:
-                        text = app.podcast.podcastName[app.podcast.currentElement] + '. ' + str(currentElement + 1) + ' из ' + str(totalElements)
+                    if app.podcast.podcastName != []:
+                        text = app.podcast.podcastName[app.podcast.currentElement] + '. ' + str(app.podcast.currentElement + 1) + ' из ' + str(app.podcast.totalElements)
                     else:
                         text = 'У этого подкаста нет аудио версии'
                     app.display(text)
                 else:
                     if app.player.player != None:
                         app.player.quitPlayer()
-                        if podcastName != []:
-                            app.player.playFile(app.podcast.podcastUrl[currentElement])
+                        if app.podcast.podcastName != []:
+                            text = app.podcast.podcastName[app.podcast.currentElement]
+                            app.display(text)
+                            app.player.playFile(app.podcast.podcastUrl[app.podcast.currentElement])
                         else:
                             text = 'У этого подкаста нет аудио версии'
                             app.display(text)
@@ -268,6 +270,8 @@ class Action:
                 else:
                     if app.player.player != None:
                         app.player.quitPlayer()
+                    text = app.youtube.parseYoutubeVideo(info = False)
+                    app.display(text)
                     app.player.playFile(app.youtube.youtubeAudioUrl)
     
     def pressKeyDown(self, app):
@@ -321,6 +325,8 @@ class Action:
                     if app.player.player != None:
                         app.player.quitPlayer()
                         if app.podcast.podcastName != []:
+                            text = app.podcast.podcastName[app.podcast.currentElement]
+                            app.display(text)
                             app.player.playFile(app.podcast.podcastUrl[app.podcast.currentElement])
                         else:
                             text = 'У этого подкаста нет аудио версии'
@@ -334,7 +340,7 @@ class Action:
                 else:
                     if app.player.player != None:
                         app.player.quitPlayer()
-                    text = app.youtube.parseYoutubeVideo()
+                    text = app.youtube.parseYoutubeVideo(info = False)
                     app.display(text)
                     app.player.playFile(app.youtube.youtubeAudioUrl)
     
